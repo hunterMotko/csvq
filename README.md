@@ -6,8 +6,13 @@ Might as well make it faster with go.
 
 ## Usage thus far
 
+```bash
 cat some.csv | ./csvq -hd 
-    - stdout of headers
+    - stdout of 
+```
+
+```bash
 cat some.csv | ./csvq -c name
     - stdout of column/s
 cat some.csv | ./csvq -c name date foo bar
+```
