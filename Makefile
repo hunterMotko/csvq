@@ -1,6 +1,6 @@
 # Change these variables as necessary.
 MAIN := ./cmd/main.go
-BINARY_NAME := go_csv 
+BINARY_NAME := csvq
 
 ## test: run all tests
 .PHONY: test
