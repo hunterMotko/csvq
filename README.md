@@ -6,13 +6,35 @@ Might as well make it faster with go.
 
 ## Usage thus far
 
+### Get/Check Headers to Stdout to
+
 ```bash
 cat some.csv | ./csvq -hd 
-    - stdout of 
 ```
+```bash
+cat some.csv | ./csvq -hd > some.csv
+```
+
+### Select Specific Columns 
 
 ```bash
 cat some.csv | ./csvq -c name
-    - stdout of column/s
+```
+```bash
 cat some.csv | ./csvq -c name date foo bar
+```
+
+### Specify By -f for File
+
+```bash
+./csvq -f some.csv -c col1 col2 col3 ect...
+```
+
+### Slice Csv Sections
+
+```bash
+cat some.csv | ./csvq -s "[1:3]"
+```
+```bash
+./csvq -f some.csv -s "[1:3]"
 ```
