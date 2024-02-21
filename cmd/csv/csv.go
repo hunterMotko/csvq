@@ -3,113 +3,92 @@ package csv
 import (
 	"encoding/csv"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 )
 
-var (
-	reset  = "\033[0m"
-	red    = "\033[31m"
-	green  = "\033[32m"
-	yellow = "\033[33m"
-	blue   = "\033[34m"
-)
-
 type Csv struct {
-	Reader  *csv.Reader
 	Headers map[string]int
 	Records [][]string
 	Lines   int
 }
 
-func (c *Csv) Init() {
-	c.Headers = make(map[string]int)
-	c.Records = make([][]string, 0)
-}
+func NewCsv(reader *csv.Reader, headers []string) (*Csv, error) {
+	head := make(map[string]int)
+	for i, v := range headers {
+		head[v] = i
+	}
 
-// SetReader sets the reader for the csv file
-func (c *Csv) SetReader(r *csv.Reader) {
-	c.Reader = r
-}
-
-func (c *Csv) GetHeaders() []string {
-	headers, err := c.Reader.Read()
+	records, err := reader.ReadAll()
 	if err != nil {
-		log.Fatalf("error reading headers: %v", err)
+		return nil, fmt.Errorf("Error reading csv: %v\n", err)
 	}
-	for i, header := range headers {
-		c.Headers[header] = i
-	}
-	return headers
+
+	return &Csv{
+		Headers: head,
+		Records: records,
+		Lines:   len(records),
+	}, nil
 }
 
-// GetRecords gets all records/body from csv file
-func (c *Csv) GetRecords() {
-	for {
-		record, err := c.Reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("error reading record: %v", err)
-		}
-		c.Records = append(c.Records, record)
+func (c *Csv) GetColumnsByIndex(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("no columns specified")
 	}
+
+	writer := csv.NewWriter(os.Stdout) 
+	defer writer.Flush()
+	temp := make([]string, len(args))
+	for _, rec := range c.Records {
+		for i, arg := range args {
+			if idx, ok := c.Headers[arg]; ok {
+				temp[i] = rec[idx]
+			} else {
+				return fmt.Errorf("header not found: %s", arg)
+			}
+		}
+		if err := writer.Write(temp); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-// GetColumnsByIndex gets columns by header index
-func (c *Csv) GetColumnsByIndex(args []string) {
-	for _, arg := range args {
-		if _, ok := c.Headers[arg]; !ok {
-			log.Fatalf("header not found: %s", arg)
-		}
-	}
-	for _, record := range c.Records {
-		for _, arg := range args {
-			fmt.Fprintf(os.Stdout, "%s,", record[c.Headers[arg]])
-		}
-		fmt.Fprintf(os.Stdout, "\n")
-	}
-}
-
-// GetColumnsBySlice gets columns by slice
-// slice should be in the form of [start:end]
-func (c *Csv) GetColumnsBySlice(slice string, headers []string) {
+func (c *Csv) GetColumnsBySlice(slice string) error {
 	slice = strings.Trim(slice, "[]")
 	sliceStr := strings.Split(slice, ":")
 	if len(sliceStr) != 2 {
-		log.Fatalf("invalid slice: %s", slice)
+		return fmt.Errorf("invalid slice: %s", slice)
 	}
 	start, err := strconv.Atoi(sliceStr[0])
 	if err != nil {
-		log.Fatalf("Invaild Atoi Conversion: %s", slice)
+		return fmt.Errorf("Invalid Atoi Conversion: %s", slice)
 	}
 	end, err := strconv.Atoi(sliceStr[1])
 	if err != nil {
-		log.Fatalf("Invaild Atoi Conversion: %s", slice)
+		return fmt.Errorf("Invalid Atoi Conversion: %s", slice)
 	}
-	var res []string
-	h := strings.Join(headers[start:end], ",")
-	res = append(res, h)
-	for _, record := range c.Records {
-		res = append(res, strings.Join(record[start:end], ","))
+	var headers []string
+	for k := range c.Headers {
+		headers = append(headers, k)
 	}
-	for i, row := range res {
-		if i == 0 {
-			fmt.Fprintf(os.Stdout, "%s%v%s\n", red, row, reset)
-		} else {
-			fmt.Fprintf(os.Stdout, "%s%v%s\n", green, row, reset)
+
+	writer := csv.NewWriter(os.Stdout)
+	if err := writer.Write(headers[start:end]); err != nil {
+		return err
+	}
+
+	for _, rec := range c.Records {
+		if err := writer.Write(rec[start:end]); err != nil {
+			return err
 		}
 	}
-}
-
-// if -c flag is set, get columns by header name
-func (c *Csv) HandleColumns(args []string) {
-	if len(args) == 0 {
-		log.Fatalf("no columns specified")
-	}
-	c.GetColumnsByIndex(args)
+	writer.Flush()
+	// 	fmt.Fprintf(os.Stdout, "%s\n", strings.Join(headers[start:end], ","))
+	// 	for _, record := range c.Records {
+	// 		fmt.Fprintf(os.Stdout, "%s\n", strings.Join(record[start:end], ","))
+	// 	}
+	return nil
 }

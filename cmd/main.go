@@ -5,20 +5,12 @@ import (
 	"flag"
 	"log"
 	"os"
-	"runtime"
 
-	"github.com/hunterMotko/csvq/utils"
 	Csv "github.com/hunterMotko/csvq/cmd/csv"
+	"github.com/hunterMotko/csvq/utils"
 )
 
-
 var (
-	reset  = "\033[0m"
-	red    = "\033[31m"
-	green  = "\033[32m"
-	yellow = "\033[33m"
-	blue   = "\033[34m"
-
 	v  *bool
 	hd *bool
 	c  *bool
@@ -27,13 +19,6 @@ var (
 )
 
 func init() {
-	if runtime.GOOS == "windows" {
-		reset = ""
-		red = ""
-		green = ""
-		yellow = ""
-		blue = ""
-	}
 	v = flag.Bool("v", false, "print version")
 	c = flag.Bool("c", false, "get columns by header name")
 	hd = flag.Bool("hd", false, "get csv headers")
@@ -42,37 +27,44 @@ func init() {
 }
 
 func main() {
-	var in *os.File = os.Stdin
 	flag.Parse()
 	if *v {
 		utils.GetVersion()
 	}
 
-	var csvFile Csv.Csv
-	csvFile.Init()
-
+	var reader *csv.Reader
 	if f != "" {
 		file, err := os.Open(f)
 		if err != nil {
 			log.Fatalf("error opening file: %v", err)
 		}
 		defer file.Close()
-		csvFile.SetReader(csv.NewReader(file))
+		reader = csv.NewReader(file)
 	}
 
-	if csvFile.Reader == nil {
+	if reader == nil {
 		utils.PipeCheck()
-		csvFile.SetReader(csv.NewReader(in))
+		reader = csv.NewReader(os.Stdin)
 	}
 
-	headers := csvFile.GetHeaders()
+	headers, err := reader.Read()
+	if err != nil {
+		log.Fatalf("Error reading csv: %v\n", err)
+	}
+
 	if *hd {
 		utils.PrintHeaders(headers)
-	} else if s != "" {
-		csvFile.GetRecords()
-		csvFile.GetColumnsBySlice(s, headers)
+	}
+
+	csvFile, err := Csv.NewCsv(reader, headers)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	if s != "" {
+		csvFile.GetColumnsBySlice(s)
 	} else if *c {
-		csvFile.GetRecords()
-		csvFile.HandleColumns(flag.Args())
+		args := flag.Args()
+		csvFile.GetColumnsByIndex(args)
 	}
 }
