@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strconv"
-	"strings"
+
+	"github.com/hunterMotko/csvq/utils"
 )
 
 type Csv struct {
@@ -41,14 +41,18 @@ func (c *Csv) GetColumnsByIndex(args []string) error {
 	}
 	writer := csv.NewWriter(os.Stdout)
 	defer writer.Flush()
+	for _, h := range args {
+		if _, ok := c.Headers[h]; !ok {
+			return fmt.Errorf("header not found: %s", h)
+		}
+	}
+	if err := writer.Write(args); err != nil {
+		return err
+	}
 	temp := make([]string, len(args))
 	for _, rec := range c.Records {
 		for i, arg := range args {
-			if idx, ok := c.Headers[arg]; ok {
-				temp[i] = rec[idx]
-			} else {
-				return fmt.Errorf("header not found: %s", arg)
-			}
+			temp[i] = rec[c.Headers[arg]]
 		}
 		if err := writer.Write(temp); err != nil {
 			return err
@@ -57,54 +61,24 @@ func (c *Csv) GetColumnsByIndex(args []string) error {
 	return nil
 }
 
-func HandleSliceString(slice string, hLen int) (int, int, error) {
-	slice = strings.Trim(slice, "[]")
-	var err error
-	var start, end int
-	if len(slice) == 2 {
-		sl := []rune(slice)
-		if sl[0] == '-' {
-			start = 0
-			end = int(sl[1] - '0')
-		} else if sl[1] == '-' {
-			start = int(sl[0] - '0')
-			end = hLen
-		}
-	} else {
-		sliceStr := strings.Split(slice, "-")
-		if len(sliceStr) != 2 {
-			return 0, 0, fmt.Errorf("invalid slice: %s", slice)
-		}
-		start, err = strconv.Atoi(sliceStr[0])
-		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid Atoi Conversion: %s", slice)
-		}
-		end, err = strconv.Atoi(sliceStr[1])
-		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid Atoi Conversion: %s", slice)
-		}
-		if end > hLen {
-			return start, end, fmt.Errorf("Index out of bounds: %d\n Your column length is:  %d\n", end, hLen)
-		}
-	}
-	return start, end, nil
-}
-
-func (c *Csv) GetColumnsBySlice(s string) error {
-	start, end, err := HandleSliceString(s, c.HeadLen)
-	if err != nil {
-		return err
-	}
-
+func (c *Csv) HeaderToArray() []string {
 	var headers []string
 	for k := range c.Headers {
 		headers = append(headers, k)
 	}
-
 	sort.SliceStable(headers, func(i, j int) bool {
 		return c.Headers[headers[i]] < c.Headers[headers[j]]
 	})
-	
+	return headers
+}
+
+func (c *Csv) GetColumnsBySlice(s string) error {
+	start, end, err := utils.HandleSliceString(s, c.HeadLen)
+	if err != nil {
+		return err
+	}
+
+	headers := c.HeaderToArray()
 	writer := csv.NewWriter(os.Stdout)
 	if err := writer.Write(headers[start:end]); err != nil {
 		return err

@@ -33,16 +33,16 @@ cat some.csv | ./csvq -c name date foo bar
 ### Slice Csv Sections
 
 ```bash
-cat some.csv | ./csvq -s "[1-3]"
+cat some.csv | ./csvq -s 1-3
 ```
 ```bash
-./csvq -f some.csv -s "[1-3]"
+./csvq -f some.csv -s 1-3
 ```
 -- Start of the columns to column [N] 
 ```bash
-./csvq -f some.csv -s "[-5]"
+./csvq -f some.csv -s -5
 ```
 -- From column [N] to the end of columns
 ```bash
-./csvq -f some.csv -s "[3-]"
+./csvq -f some.csv -s 3-
 ```

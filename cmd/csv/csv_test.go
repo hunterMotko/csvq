@@ -77,17 +77,17 @@ func TestSlices(t *testing.T) {
 	}{
 		{
 			desc:     "common slice",
-			sliceStr: "[1-4]",
+			sliceStr: "1-4",
 			expect:   MockCSV(SliceColumns(1, 4)),
 		},
 		{
 			desc:     "start col to end of columns slice",
-			sliceStr: "[5-]",
+			sliceStr: "5-",
 			expect:   MockCSV(SliceColumns(5, cv.HeadLen)),
 		},
 		{
 			desc:     "begining to N column",
-			sliceStr: "[-5]",
+			sliceStr: "-5",
 			expect:   MockCSV(SliceColumns(0, 5)),
 		},
 		// {
